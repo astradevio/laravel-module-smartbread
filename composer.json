@@ -1,6 +1,6 @@
 {
     "name": "astradevio/laravel-module-smartbread-generator",
-    "description": "Generate Laravel bread on a module from a template.",
+    "description": "Generate Laravel SmartBread on a laravel module from a template.",
     "license": "MIT",
     "authors": [
         {
@@ -14,7 +14,9 @@
         "Laravel",
         "Laravel Modules",
         "Generator",
-        "Bread"
+        "SmartBread",
+        "CRUD",
+        "CRUD Generator"
     ],
     "require": {
         "illuminate/support": "10.x|11.x|^12.0",
