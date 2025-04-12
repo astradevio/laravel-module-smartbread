@@ -17,7 +17,7 @@
  * 
  */
 
- namespace astradev\LaravelModuleSmartBreadGenerator\Console\Commands;
+ namespace astradevio\LaravelModuleSmartBreadGenerator\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Str;
