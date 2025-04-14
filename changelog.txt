@@ -1,0 +1,5 @@
+# Changelog
+
+Version 0.0.4 at 2025-04-14
+- Fix bug on publish and documentation
+- Created changelog.md file
