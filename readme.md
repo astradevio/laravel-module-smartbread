@@ -29,7 +29,7 @@ composer require astradev/laravel-module-smartbread-generator
 Publish both the `config` and `stubs`:
 
 ```bash
-php artisan vendor:publish --provider="astradev\LaravelModuleSmartBreadGenerator\LaravelModuleSmartBreadGeneratorServiceProvider"
+php artisan vendor:publish --provider="astradevio\LaravelModuleSmartBreadGenerator\LaravelModuleSmartBreadGeneratorServiceProvider" 
 ```
 
 This will publish a `module-smartbread.php` config file

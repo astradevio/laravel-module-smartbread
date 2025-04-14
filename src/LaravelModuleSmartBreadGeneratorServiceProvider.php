@@ -36,11 +36,12 @@ class LaravelModuleSmartBreadGeneratorServiceProvider extends ServiceProvider
         }
 
         $this->publishes([
+            __DIR__.'/../config/module-smartbread.php' => config_path('module-smartbread.php'),
+        ], 'config');
+
+        $this->publishes([
             __DIR__.'/../stubs' => base_path('stubs'),
         ], 'stubs');
 
-        $this->publishes([
-                __DIR__.'/../config/module-smartbread.php' => config_path('module-smartbread.php'),
-            ], 'config');
     }
 }
