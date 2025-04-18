@@ -23,16 +23,16 @@ bootstrap-icons 1.11
 You can install the package via composer:
 
 ```bash
-composer require astradev/laravel-module-smartbread-generator
+composer require astradev/laravel-module-smartbread
 ```
 
 Publish both the `config` and `stubs`:
 
 ```bash
-php artisan vendor:publish --provider="astradevio\LaravelModuleSmartBreadGenerator\LaravelModuleSmartBreadGeneratorServiceProvider" 
+php artisan vendor:publish --provider="astradevio\LaravelModuleSmartBread\SmartBreadServiceProvider" 
 ```
 
-This will publish a `module-smartbread.php` config file
+This will publish a `smartbread.php` config file
 
 This contains:
 ```php
@@ -54,7 +54,8 @@ By default, the stubs will be located at stubs/module-smartbread you can add you
 # Usage
 
 ```bash
-php artisan module:smartbread
+php artisan smartbread:generate
+php artisan smartbread:replace view
 ```
 or 
 ```bash

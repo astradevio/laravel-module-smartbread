@@ -11,8 +11,7 @@
  * 
  * 
  */
-
-namespace astradevio\LaravelModuleSmartBreadGenerator\Services;
+namespace astradevio\LaravelModuleSmartBread\Services;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Str;
@@ -27,7 +26,7 @@ use function Laravel\Prompts\info;
 use function Laravel\Prompts\select;
 use function Laravel\Prompts\text;
 
-class LaravelModuleSmartBreadServices {
+class SmartBreadService {
 
     protected string $moduleName = '';      // Name of module
     protected string $modelName = '';       // Name of model
@@ -43,11 +42,16 @@ class LaravelModuleSmartBreadServices {
 
     protected SymfonyFilesystem  $filesystem;
 
-    protected string $configFile = 'module-smartbread';
+    public string $configFile = 'smartbread';
 
-    private function __construct(Command $command) {
-        $this->command = $command;
+    private function __construct() {
+        
         $this->filesystem = new SymfonyFilesystem();
+
+        /**
+         * Load replacements in memory
+         */
+        $this->loadReplacements();
     }
 
     /**

@@ -11,11 +11,13 @@
  * 
  * See: http://www.laravelmodule.com
  * 
- * @package astradev\ModuleSmartBreadGenerator
+ * @package astradev\ModuleSmartBread
  * @author  Leandro Neves <leandro@astradev.io>
  * @license MIT
  * 
  */
+
+namespace astradevio\LaravelModuleSmartBread\Services;
 
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\File;
@@ -24,7 +26,7 @@ use Symfony\Component\Filesystem\Filesystem as SymfonyFilesystem;
 use Symfony\Component\Finder\Finder;
 use SplFileInfo;
 
-class LaravelModuleSmartBreadRoyuteFileParser {
+class SmartBreadRouteFileParser {
 
     protected SplFileInfo $routeFile;
     protected $namespace = '';

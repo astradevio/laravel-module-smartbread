@@ -1,7 +1,8 @@
 {
-    "name": "astradevio/laravel-module-smartbread-generator",
-    "description": "Generate Laravel SmartBread on a laravel module from a template.",
+    "name": "astradevio/laravel-module-smartbread",
+    "description": "Manage Laravel SmartBread on a laravel modules.",
     "license": "MIT",
+    "type": "library",
     "authors": [
         {
             "name": "Leandro Neves",
@@ -9,7 +10,7 @@
             "homepage": "https://www.astradev.io"
         }
     ],
-    "homepage": "https://github.com/astradev-io/laravel-module-smartbread-generator",
+    "homepage": "https://github.com/astradev-io/laravel-module-smartbread",
     "keywords": [
         "Laravel",
         "Laravel Modules",
@@ -26,16 +27,18 @@
     },
     "autoload": {
         "psr-4": {
-            "astradevio\\LaravelModuleSmartBreadGenerator\\": "src/"
+            "astradevio\\LaravelModuleSmartBread\\": "src/"
         }
     },
     "extra": {
         "laravel": {
             "providers": [
-                "astradevio\\LaravelModuleSmartBreadGenerator\\LaravelModuleSmartBreadGeneratorServiceProvider"
+                "astradevio\\LaravelModuleSmartBread\\SmartBreadServiceProvider"
             ],
             "aliases": {
-                "Generator": "astradevio\\LaravelModuleSmartBreadGenerator\\Facades\\LaravelModuleSmartBreadGenerator"
+                "SmartBreadGenerator": "astradevio\\LaravelModuleSmartBread\\Facades\\SmartBreadGenerator",
+                "SmartBreadReplacer": "astradevio\\LaravelModuleSmartBread\\Facades\\SmartBreadReplacer",
+                "SmartBreadService": "astradevio\\LaravelModuleSmartBread\\Facades\\SmartBreadService"
             }
         }
     }

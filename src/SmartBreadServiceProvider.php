@@ -1,15 +1,16 @@
 <?php
 
-namespace astradevio\LaravelModuleSmartBreadGenerator;
+namespace astradevio\LaravelModuleSmartBread;
 
 use Illuminate\Support\ServiceProvider;
-use astradevio\LaravelModuleSmartBreadGenerator\Console\Commands\LaravelModuleSmartBreadGeneratorCommand;
+use astradevio\LaravelModuleSmartBread\Console\Commands\SmartBreadGeneratorCommand;
+use astradevio\LaravelModuleSmartBread\Console\Commands\SmartBreadReplacerCommand;
 
-class LaravelModuleSmartBreadGeneratorServiceProvider extends ServiceProvider
+class SmartBreadServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->mergeConfigFrom(__DIR__.'/../config/module-smartbread.php', 'module-smartbread');
+        $this->mergeConfigFrom(__DIR__.'/../config/smartbread.php', 'smartbread');
     }
 
     public function boot(): void
@@ -25,7 +26,8 @@ class LaravelModuleSmartBreadGeneratorServiceProvider extends ServiceProvider
         }
 
         $this->commands([
-            LaravelModuleSmartBreadGeneratorCommand::class,
+            SmartBreadGeneratorCommand::class,
+            SmartBreadReplacerCommand::class,
         ]);
     }
 
@@ -36,7 +38,7 @@ class LaravelModuleSmartBreadGeneratorServiceProvider extends ServiceProvider
         }
 
         $this->publishes([
-            __DIR__.'/../config/module-smartbread.php' => config_path('module-smartbread.php'),
+            __DIR__.'/../config/smartbread.php' => config_path('smartbread.php'),
         ], 'config');
 
         $this->publishes([
