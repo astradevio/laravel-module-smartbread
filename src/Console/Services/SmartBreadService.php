@@ -28,23 +28,25 @@ use function Laravel\Prompts\text;
 
 class SmartBreadService {
 
-    protected string $moduleName = '';      // Name of module
-    protected string $modelName = '';       // Name of model
-    protected string $tableName = '';       // Name of table on model
-    protected string $template = '';        // Chosen template
-    protected string $templatePath = '';    // Path to template directory e.g: app_path() . /stubs/module-generator/$template
-    protected string $tempPath = '';        // Path to temporary folder e.g: app_path() . /generator-temp
-    protected string $modulePath = '';      // Path to module directory e.g: app_path() . /Modules/$moduleName
-    protected array $replacements = [];     // Replacements for template files
+    public string $moduleName = '';      // Name of module
+    public string $modelName = '';       // Name of model
+    public string $tableName = '';       // Name of table on model
+    public string $template = '';        // Chosen template
+    public string $templatePath = '';    // Path to template directory e.g: app_path() . /stubs/module-generator/$template
+    public string $tempPath = '';        // Path to temporary folder e.g: app_path() . /generator-temp
+    public string $modulePath = '';      // Path to module directory e.g: app_path() . /Modules/$moduleName
+    public array $replacements = [];     // Replacements for template files
 
-    protected Command $command; // Command instance ???
+    public Command $command; // Command instance ???
 
 
-    protected SymfonyFilesystem  $filesystem;
+    public SymfonyFilesystem  $filesystem;
 
     public string $configFile = 'smartbread';
 
-    private function __construct() {
+    public function __construct() {
+
+        exit(1);
         
         $this->filesystem = new SymfonyFilesystem();
 
@@ -58,7 +60,7 @@ class SmartBreadService {
      * @param string $message - Message to display
      * @return int - Command::FAILURE
      */
-    private function exit_fail(string $message): int
+    public function exit_fail(string $message): int
     {
         error($message);
         $this->filesystem->remove($this->tempPath);
@@ -69,7 +71,7 @@ class SmartBreadService {
      * @param string $message - Message to display
      * @return int - Command::SUCCESS
      */
-    private function exit_success(string $message): int
+    public function exit_success(string $message): int
     {
         info($message);
         $this->filesystem->remove($this->tempPath);
@@ -81,7 +83,7 @@ class SmartBreadService {
      *
      * @return string: Module name
      */
-    protected function loadModuleName(): string
+    public function loadModuleName(): string
     {
         $this->moduleName = Str::studly($this->argument('module')) ?? '';
 
@@ -110,7 +112,7 @@ class SmartBreadService {
      *
      * @return string: Model name
      */
-    protected function loadModelName(): string
+    public function loadModelName(): string
     {
         $this->modelName = Str::studly($this->argument('model')) ?? '';
 
@@ -186,7 +188,7 @@ class SmartBreadService {
      * 
      * @return string: Table name
      */
-    protected function loadTableName(): string
+    public function loadTableName(): string
     {
         $this->tableName = Str::snake($this->argument('table')) ?? '';
 
@@ -223,7 +225,7 @@ class SmartBreadService {
      * @param string $model_name
      * @return bool
      */
-    protected function modelExists($model_name): bool
+    public function modelExists($model_name): bool
     {   
         $model_file = $this->modulePath . $this->moduleName . '/app/Model/' . $model_name . '.php';
         return file_exists($model_file);
@@ -235,7 +237,7 @@ class SmartBreadService {
      * @param string $path
      * @return void
      */
-    protected function delete($path): void
+    public function delete($path): void
     {
         if (file_exists($path)) {
             $this->filesystem->remove($path);
@@ -249,14 +251,14 @@ class SmartBreadService {
      * @param string $destination
      * @return void
      */
-    protected function mirror($source, $destination): void
+    public function mirror($source, $destination): void
     {
         $this->filesystem->mirror($source, $destination);
     }
 
     
 
-    protected function getTargetPathname(SplFileInfo $template): string 
+    public function getTargetPathname(SplFileInfo $template): string 
     {
         $template_relative_pathname = substr($template->getPathname(), strlen($this->tempPath . '/Module/'));           
         $template_relative_path = dirname($template_relative_pathname);
@@ -268,7 +270,7 @@ class SmartBreadService {
         
     }
 
-    protected function createTargetPath(SplFileInfo $template): string
+    public function createTargetPath(SplFileInfo $template): string
     {
         $target_pathname = $this->getTargetPathname($template);
         $target_path = dirname($target_pathname);
@@ -290,7 +292,7 @@ class SmartBreadService {
      * @return void
      */
 
-    protected function createTargetFile(SplFileInfo $template): void
+    public function createTargetFile(SplFileInfo $template): void
     {
 
         $target_pathname = $this->getTargetPathname($template);
@@ -306,7 +308,7 @@ class SmartBreadService {
      * @param string $sourceFile
      * @return string
      */
-    protected function appendTimestamp($sourceFile): string
+    public function appendTimestamp($sourceFile): string
     {
         $timestamp = date('Y_m_d_his_');
         $file = basename($sourceFile);
@@ -321,7 +323,7 @@ class SmartBreadService {
      * @param SplFileInfo $destination_file
      * @return void
      */
-    protected function createFileFromStub(SplFileInfo $source_file, SplFileInfo $destination_file): void
+    public function createFileFromStub(SplFileInfo $source_file, SplFileInfo $destination_file): void
     {
 
         $destination_path = $destination_file->getPath();
@@ -342,7 +344,7 @@ class SmartBreadService {
      * @return string
      */
 
-    protected function replaceContent(string $content): string    {
+    public function replaceContent(string $content): string    {
         return str_replace(array_keys($this->replacements), array_values($this->replacements), $content);
     }
 
@@ -352,7 +354,7 @@ class SmartBreadService {
      * @param SplFileInfo $sourceFile
      * @return string
      */
-    protected function stubFilename(SplFileInfo $sourceFile): string {
+    public function stubFilename(SplFileInfo $sourceFile): string {
 
         $destinationPath = $this->replaceContent($sourceFile->getPath());
         $destinationFile = $this->replaceContent($sourceFile->getFilename());
@@ -378,7 +380,7 @@ class SmartBreadService {
      * @return string
      */
     
-    protected function renamePlaceholders($model, $separator, $arrayMap = null): string
+    public function renamePlaceholders($model, $separator, $arrayMap = null): string
     {
         $parts = preg_split('/(?=[A-Z])/', $model, -1, PREG_SPLIT_NO_EMPTY);
 
@@ -395,7 +397,7 @@ class SmartBreadService {
      * @return void
      */
 
-    protected function loadReplacements(): void {
+    public function loadReplacements(): void {
 
         $module = $this->moduleName;
         $model  = $this->modelName;
