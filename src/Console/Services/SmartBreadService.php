@@ -28,41 +28,26 @@ use function Laravel\Prompts\text;
 
 class SmartBreadService {
 
-    public string $moduleName = '';      // Name of module
-    public string $modelName = '';       // Name of model
-    public string $tableName = '';       // Name of table on model
-    public string $template = '';        // Chosen template
-    public string $templatePath = '';    // Path to template directory e.g: app_path() . /stubs/module-generator/$template
-    public string $tempPath = '';        // Path to temporary folder e.g: app_path() . /generator-temp
-    public string $modulePath = '';      // Path to module directory e.g: app_path() . /Modules/$moduleName
-    public array $replacements = [];     // Replacements for template files
+    protected string $moduleName = '';      // Name of module
+    protected string $modelName = '';       // Name of model
+    protected string $tableName = '';       // Name of table on model
+    protected string $template = '';        // Chosen template
+    protected string $templatePath = '';    // Path to template directory e.g: app_path() . /stubs/module-generator/$template
+    protected string $tempPath = '';        // Path to temporary folder e.g: app_path() . /generator-temp
+    protected string $modulePath = '';      // Path to module directory e.g: app_path() . /Modules/$moduleName
+    protected array $replacements = [];     // Replacements for template files
 
-    public Command $command; // Command instance ???
+    protected Command $command; // Command instance ???
 
 
-    public SymfonyFilesystem  $filesystem;
+    protected SymfonyFilesystem  $filesystem;
 
     public string $configFile = 'smartbread';
 
-    public function __construct() {
+    private function __construct() {
         
         $this->filesystem = new SymfonyFilesystem();
 
-        /* 
-         * Setup parameters
-         */
-        $this->useSingular = config($this->configFile . '.use_singular') === true ? true : false;
-
-
-        /**
-         * Setup module's name in PascalCase
-         */
-        $modulePath = config('modules.paths.modules').'/';
-        $this->modulePath = Str::endsWith($modulePath, '/') ? $modulePath : $modulePath.'/';
-
-        info($this->modulePath);
-
-        
         /**
          * Load replacements in memory
          */
@@ -73,7 +58,7 @@ class SmartBreadService {
      * @param string $message - Message to display
      * @return int - Command::FAILURE
      */
-    public function exit_fail(string $message): int
+    private function exit_fail(string $message): int
     {
         error($message);
         $this->filesystem->remove($this->tempPath);
@@ -84,7 +69,7 @@ class SmartBreadService {
      * @param string $message - Message to display
      * @return int - Command::SUCCESS
      */
-    public function exit_success(string $message): int
+    private function exit_success(string $message): int
     {
         info($message);
         $this->filesystem->remove($this->tempPath);
@@ -96,9 +81,9 @@ class SmartBreadService {
      *
      * @return string: Module name
      */
-    public function loadModuleName($argument): string
+    protected function loadModuleName(): string
     {
-        $this->moduleName = Str::studly($argument) ?? '';
+        $this->moduleName = Str::studly($this->argument('module')) ?? '';
 
         if ($this->moduleName !== '') {
             return $this->moduleName;
@@ -111,7 +96,7 @@ class SmartBreadService {
                 validate: fn(string $value) => match (true) {
                     strlen($value) < 1 => 'The name must be at least 1 characters.',
                     Str::contains($value, ' ') => 'The name must not contain spaces.',
-                    ! file_exists($this->modulePath . Str::studly($value)) => "Module does not exist. " . $this->modulePath . Str::studly($value),
+                    ! file_exists($this->modulePath . Str::studly($value)) => "Module does not exist. " . $this->modulePath,
                     default => null
                 }
             )
@@ -125,9 +110,9 @@ class SmartBreadService {
      *
      * @return string: Model name
      */
-    public function loadModelName($argument): string
+    protected function loadModelName(): string
     {
-        $this->modelName = Str::studly($argument) ?? '';
+        $this->modelName = Str::studly($this->argument('model')) ?? '';
 
         if ($this->modelName !== '') {
             return $this->modelName;
@@ -154,9 +139,10 @@ class SmartBreadService {
      *
      * @return string: Template name
      */
-    public function loadTemplate($argument)
+    protected function loadTemplate(): string
     {
-        $template = $argument ?? '';
+        $template = $this->argument('template') ?? '';
+
         $templateConfig = config($this->configFile . '.templates');
 
         if ($template !== '') {
@@ -176,9 +162,15 @@ class SmartBreadService {
             $template = $templateConfig[$template];
         }
 
-        $this->$template    = $template;
+        info("Template: $template");
+        info("tempPath: $this->tempPath");
+        info("templatePath: $this->templatePath");
+
+        $this->template = $template;
         $this->templatePath = base_path($this->template);
         $this->tempPath     = base_path('.tmp'. Str::random(10));
+
+        return $this->template;
     }
    
     /**
@@ -186,9 +178,9 @@ class SmartBreadService {
      * 
      * @return string: Table name
      */
-    public function loadTableName($argument): string
+    protected function loadTableName(): string
     {
-        $this->tableName = Str::snake($argument) ?? '';
+        $this->tableName = Str::snake($this->argument('table')) ?? '';
 
         if ($this->tableName !== '') {
             if (config($this->configFile . '.append_module_to_tablename') === true) {
@@ -223,7 +215,7 @@ class SmartBreadService {
      * @param string $model_name
      * @return bool
      */
-    public function modelExists($model_name): bool
+    protected function modelExists($model_name): bool
     {   
         $model_file = $this->modulePath . $this->moduleName . '/app/Model/' . $model_name . '.php';
         return file_exists($model_file);
@@ -235,7 +227,7 @@ class SmartBreadService {
      * @param string $path
      * @return void
      */
-    public function delete($path): void
+    protected function delete($path): void
     {
         if (file_exists($path)) {
             $this->filesystem->remove($path);
@@ -249,13 +241,14 @@ class SmartBreadService {
      * @param string $destination
      * @return void
      */
-    public function mirror($source, $destination): void
+    protected function mirror($source, $destination): void
     {
-        info("Copying template files from $source to $destination");
         $this->filesystem->mirror($source, $destination);
     }
 
-    public function getTargetPathname(SplFileInfo $template): string 
+    
+
+    protected function getTargetPathname(SplFileInfo $template): string 
     {
         $template_relative_pathname = substr($template->getPathname(), strlen($this->tempPath . '/Module/'));           
         $template_relative_path = dirname($template_relative_pathname);
@@ -267,7 +260,7 @@ class SmartBreadService {
         
     }
 
-    public function createTargetPath(SplFileInfo $template): string
+    protected function createTargetPath(SplFileInfo $template): string
     {
         $target_pathname = $this->getTargetPathname($template);
         $target_path = dirname($target_pathname);
@@ -289,7 +282,7 @@ class SmartBreadService {
      * @return void
      */
 
-    public function createTargetFile(SplFileInfo $template): void
+    protected function createTargetFile(SplFileInfo $template): void
     {
 
         $target_pathname = $this->getTargetPathname($template);
@@ -305,7 +298,7 @@ class SmartBreadService {
      * @param string $sourceFile
      * @return string
      */
-    public function appendTimestamp($sourceFile): string
+    protected function appendTimestamp($sourceFile): string
     {
         $timestamp = date('Y_m_d_his_');
         $file = basename($sourceFile);
@@ -320,7 +313,7 @@ class SmartBreadService {
      * @param SplFileInfo $destination_file
      * @return void
      */
-    public function createFileFromStub(SplFileInfo $source_file, SplFileInfo $destination_file): void
+    protected function createFileFromStub(SplFileInfo $source_file, SplFileInfo $destination_file): void
     {
 
         $destination_path = $destination_file->getPath();
@@ -341,7 +334,7 @@ class SmartBreadService {
      * @return string
      */
 
-    public function replaceContent(string $content): string    {
+    protected function replaceContent(string $content): string    {
         return str_replace(array_keys($this->replacements), array_values($this->replacements), $content);
     }
 
@@ -351,7 +344,7 @@ class SmartBreadService {
      * @param SplFileInfo $sourceFile
      * @return string
      */
-    public function stubFilename(SplFileInfo $sourceFile): string {
+    protected function stubFilename(SplFileInfo $sourceFile): string {
 
         $destinationPath = $this->replaceContent($sourceFile->getPath());
         $destinationFile = $this->replaceContent($sourceFile->getFilename());
@@ -377,7 +370,7 @@ class SmartBreadService {
      * @return string
      */
     
-    public function renamePlaceholders($model, $separator, $arrayMap = null): string
+    protected function renamePlaceholders($model, $separator, $arrayMap = null): string
     {
         $parts = preg_split('/(?=[A-Z])/', $model, -1, PREG_SPLIT_NO_EMPTY);
 
@@ -394,7 +387,7 @@ class SmartBreadService {
      * @return void
      */
 
-    public function loadReplacements(): void {
+    protected function loadReplacements(): void {
 
         $module = $this->moduleName;
         $model  = $this->modelName;

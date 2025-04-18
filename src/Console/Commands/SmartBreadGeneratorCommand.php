@@ -34,68 +34,46 @@ use function Laravel\Prompts\text;
 use \astradevio\LaravelModuleSmartBread\Services\SmartBreadService;
 use \astradevio\LaravelModuleSmartBread\Services\SmartBreadRouteFileParser;
 
+
 class SmartBreadGeneratorCommand extends Command
 {
     protected $signature = 'smartbread:generate {template?} {module?} {model?} {table?}';
     protected $description = 'Create starter module from a template.';
-    protected string $moduleName = '';      // Name of module
-    protected string $modelName = '';       // Name of model
-    protected string $tableName = '';       // Name of table on model
-    protected string $template = '';        // Chosen template
-    protected string $templatePath = '';    // Path to template directory e.g: app_path() . /stubs/module-generator/$template
-    protected string $tempPath = '';        // Path to temporary folder e.g: app_path() . /generator-temp
-    protected string $modulePath = '';      // Path to module directory e.g: app_path() . /Modules/$moduleName
-    protected array $replacements = [];     // Replacements for template files
 
-    protected SymfonyFilesystem  $filesystem;
+    public SmartBreadService $service;
 
     public function handle(): bool
     {
 
-        $service = new SmartBreadService();
+        $this->service = new SmartBreadService();
 
-        /* 
-         * Setup parameters
-         */
-        $this->useSingular = config($service->configFile . '.use_singular') === true ? true : false;
-        
-        /** 
-         * Setup templates 
-         */     
-        $this->template = $service->loadTemplate();
-        $this->templatePath = base_path($this->template);
-        $this->tempPath     = base_path('.tmp'. Str::random(10));
+        // Template
+        $this->service->loadTemplate($this->argument('template'));
 
-        if (!file_exists($this->templatePath)) {
-            $this->exit_fail("$this->templatePath Path does not exist! Please check your config/module-generator.php file.");
+        if (!file_exists($this->service->templatePath)) {
+            $this->service->exit_fail("$this->service->templatePath Path does not exist! Please check your config/module-generator.php file.");
         }
 
-        /**
-         * Setup module's name in PascalCase
-         */
-        $modulePath = config('modules.paths.modules').'/';
-        $this->modulePath = Str::endsWith($modulePath, '/') ? $modulePath : $modulePath.'/';
+        $this->service->loadModuleName($this->argument('module'));
 
-        $this->moduleName = $service->loadModuleName();
-
-        if (file_exists($this->modulePath.$this->moduleName)) {
-            $service->exit_fail("$this->moduleName module exists.");
+        if (!file_exists($this->service->modulePath . $this->service->moduleName)) {
+            $this->service->exit_fail($this->service->modulePath . $this->service->moduleName . " module does not exists.");
         }
 
         /**
          * Setup model's name in PascalCase
          */
-        $this->modelName = $service->loadModelName();
+        $this->service->loadModelName($this->argument('model'));
 
-        if ($this->modelExists($this->modelName)) {
-            service->exit_fail("$this->moduleName / $this->modelName exists.");
+        if ($this->service->modelExists($this->service->modelName)) {
+            $this->service->exit_fail("$this->service->moduleName / $this->service->modelName exists.");
         }
 
         /**
          * Setup table name in snake_case
          */
 
-        $this->tableName = $service->setTableName();
+        $this->service->loadTableName($this->argument('table'));
       
 
         /**
@@ -103,8 +81,8 @@ class SmartBreadGeneratorCommand extends Command
          */
         $this->generate();
 
-        $this->newLine();
-        $service->exit_success("Bread template $this->modelName on Module $this->moduleName created successfully.");
+        newLine();
+        $this->service->exit_success("Bread template $this->modelName on Module $this->moduleName created successfully.");
     }
 
     
@@ -112,13 +90,15 @@ class SmartBreadGeneratorCommand extends Command
     {
         //ensure directory does not exist
 
+        $this->service = $this->service;
+
         info('Creating temporary directory of stub files.');
-        $service->delete($this->tempPath);
-        $service->mirror($this->templatePath, $this->tempPath.'/Module');
+        $this->service->delete($this->service->tempPath);
+        $this->service->mirror($this->service->templatePath, $this->service->tempPath.'/Module');
 
         info('Writing template files from stubs.');
         $finder = new Finder();
-        $finder->files()->in($this->tempPath);
+        $finder->files()->in($this->service->tempPath);
         
         $progressBar = $this->output->createProgressBar(iterator_count($finder));
         $progressBar->setFormat(' %current%/%max% [%bar%] %percent:3s%% - %message%');
@@ -127,32 +107,32 @@ class SmartBreadGeneratorCommand extends Command
 
             // load stub and template file information
             $stub_file = new SplFileInfo($file);
-            $template_file = new SplFileInfo($service->stubFilename($stub_file));
+            $template_file = new SplFileInfo($this->service->stubFilename($stub_file));
 
             $progressBar->setMessage("Processing " . $template_file->getFilename() . ".");
             
             //!!
             // ignores files from config
-            if (in_array($template_file, config($service->configFile . '.ignore_files'), true)) {
+            if (in_array($template_file, config($this->service->configFile . '.ignore_files'), true)) {
                 continue;
             }
 
             // replace content from stub on template
-            $service->createFileFromStub($stub_file, $template_file);
+            $this->service->createFileFromStub($stub_file, $template_file);
 
             // move templates to destination
 
             // routes
-            if (Str::endsWith($template_file, config($service->configFile . '.routes_pathnames'))) {
+            if (Str::endsWith($template_file, config($this->service->configFile . '.routes_pathnames'))) {
 
-                $target_route_pathname = $this->getTargetPathname($template_file);
+                $target_route_pathname = $this->service->getTargetPathname($template_file);
                 if (!File::exists($target_route_pathname)) {
-                    info('Route file does not exist. Creating new route file.'); //$this
-                    $service->createTargetFile($template_file);                    
+                    info('Route file does not exist. Creating new route file.');
+                    $this->service->createTargetFile($template_file);                    
                     continue;   
                 }
 
-                info("Route " . $template_file->getFilename() . " exist. Merging route file."); // $this
+                info("Route " . $template_file->getFilename() . " exist. Merging route file."); 
 
                 $template_routefile = new LaravelModuleSmartBreadRouteFileParser($template_file);
                 $target_routefile = new LaravelModuleSmartBreadRouteFileParser($target_route_pathname);
@@ -166,7 +146,7 @@ class SmartBreadGeneratorCommand extends Command
 
 
 
-            $service->createTargetFile($template_file);
+            $this->service->createTargetFile($template_file);
 
             $progressBar->advance();
         }
