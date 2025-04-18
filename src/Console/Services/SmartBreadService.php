@@ -139,22 +139,25 @@ class SmartBreadService {
      *
      * @return string: Template name
      */
-    protected function loadTemplate(): string
+    public function loadTemplate($argument): string
     {
-        $template = $this->argument('template') ?? '';
+        $template = $argument ?? '';
 
         $templateConfig = config($this->configFile . '.templates');
+        dd("1", $templateConfig);
 
         if ($template !== '') {
             if (in_array($template, array_keys($templateConfig))) {
                 $template = $templateConfig[$template];
             } else {
-                error("Invalid template option: $template");
+                dd("Invalid template option: $template");
                 $template = '';
             }
         }
 
-        if ($template === '') {
+        dd("1", $template);
+
+        if ($template == '') {
             $template = select(
                 'Which template would you like to use?',
                 array_keys($templateConfig)
@@ -162,13 +165,18 @@ class SmartBreadService {
             $template = $templateConfig[$template];
         }
 
-        info("Template: $template");
-        info("tempPath: $this->tempPath");
-        info("templatePath: $this->templatePath");
+        dd($template);
+
+        if (!file_exists($template)) {
+            error("Template not found: $template");
+            $template = '';
+        }
 
         $this->template = $template;
         $this->templatePath = base_path($this->template);
         $this->tempPath     = base_path('.tmp'. Str::random(10));
+        dd("AQUI Template: $template", "tempPath: $this->tempPath", "templatePath: $this->templatePath");
+
 
         return $this->template;
     }

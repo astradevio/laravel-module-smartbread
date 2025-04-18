@@ -48,11 +48,13 @@ class SmartBreadGeneratorCommand extends Command
         $this->service = new SmartBreadService();
 
         // Template
-        $this->service->loadTemplate($this->argument('template'));
+        $result = $this->service->loadTemplate($this->argument('template'));
 
         if (!file_exists($this->service->templatePath)) {
             $this->service->exit_fail("$this->service->templatePath Path does not exist! Please check your config/module-generator.php file.");
         }
+
+        dd('fora', $this->service->template, $this->service->tempPath, $this->service->templatePath);
 
         $this->service->loadModuleName($this->argument('module'));
 
