@@ -1,7 +1,7 @@
 <?php
 /**
- * ModuleSmartBreadGenerator
- * Create starter bread template on a Laravel Module
+ * ModuleSmartBreadServices
+ * Services form smartbread templates.
  * 
  * See: http://www.laravelmodule.com
  * 
@@ -9,15 +9,10 @@
  * @author  Leandro Neves <leandro@astradev.io>
  * @license MIT
  * 
- * This work is based on rewrite on a work of David Carr. 
- * 
- * See: 
- * dcblogdev/laravel-module-generator
- * https://github.com/dcblogdev/laravel-module-generator
  * 
  */
 
- namespace astradevio\LaravelModuleSmartBreadGenerator\Console\Commands;
+namespace astradevio\LaravelModuleSmartBreadGenerator\Services;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Str;
@@ -32,10 +27,8 @@ use function Laravel\Prompts\info;
 use function Laravel\Prompts\select;
 use function Laravel\Prompts\text;
 
-class LaravelModuleSmartBreadGeneratorCommand extends Command
-{
-    protected $signature = 'module:smartbread {template?} {module?} {model?} {table?}';
-    protected $description = 'Create starter module from a template';
+class LaravelModuleSmartBreadServices {
+
     protected string $moduleName = '';      // Name of module
     protected string $modelName = '';       // Name of model
     protected string $tableName = '';       // Name of table on model
@@ -45,10 +38,22 @@ class LaravelModuleSmartBreadGeneratorCommand extends Command
     protected string $modulePath = '';      // Path to module directory e.g: app_path() . /Modules/$moduleName
     protected array $replacements = [];     // Replacements for template files
 
+    protected Command $command; // Command instance ???
+
+
     protected SymfonyFilesystem  $filesystem;
 
     protected string $configFile = 'module-smartbread';
 
+    private function __construct(Command $command) {
+        $this->command = $command;
+        $this->filesystem = new SymfonyFilesystem();
+    }
+
+    /**
+     * @param string $message - Message to display
+     * @return int - Command::FAILURE
+     */
     private function exit_fail(string $message): int
     {
         error($message);
@@ -56,6 +61,10 @@ class LaravelModuleSmartBreadGeneratorCommand extends Command
         exit (Command::FAILURE);
     }
 
+    /**
+     * @param string $message - Message to display
+     * @return int - Command::SUCCESS
+     */
     private function exit_success(string $message): int
     {
         info($message);
@@ -63,82 +72,17 @@ class LaravelModuleSmartBreadGeneratorCommand extends Command
         exit (Command::SUCCESS);
     }
 
-    public function handle(): bool
-    {
-        /* 
-         * Setup filesystem
-         */
-        $this->filesystem = new SymfonyFilesystem;
-
-        /* 
-         * Setup parameters
-         */
-        $this->useSingular = config($this->configFile . '.use_singular') === true ? true : false;
-        
-        /** 
-         * Setup templates 
-         */     
-        $this->getTemplate();
-        $this->templatePath = base_path($this->template);
-        $this->tempPath     = base_path('.tmp'. Str::random(10));
-
-        if (!file_exists($this->templatePath)) {
-            $this->exit_fail("$this->templatePath Path does not exist! Please check your config/module-generator.php file.");
-        }
-
-        /**
-         * Setup module's name in PascalCase
-         */
-        $modulePath = config('modules.paths.modules').'/';
-        $this->modulePath = Str::endsWith($modulePath, '/') ? $modulePath : $modulePath.'/';
-
-        $this->setModuleName();
-
-        if (! file_exists($this->modulePath.$this->moduleName)) {
-            $this->exit_fail("$this->moduleName module does not exist.");
-        }
-
-        /**
-         * Setup model's name in PascalCase
-         */
-        $this->setModelName();
-
-        if ($this->modelExists($this->modelName)) {
-            $this->exit_fail("$this->moduleName / $this->modelName exists.");
-            return Command::FAILURE; 
-        }
-
-        /**
-         * Setup table name in snake_case
-         */
-
-        $this->setTableName();
-
-        /**
-         * Load replacements in memory
-         */
-        $this->loadReplacements();
-
-        /**
-         * Generate models 
-         */
-        $this->generate();
-
-        $this->newLine();
-        $this->exit_success("Bread template $this->modelName on Module $this->moduleName created successfully.");
-    }
-
     /**
-     * Set the module name
+     * Load the module name
      *
-     * @return void
+     * @return string: Module name
      */
-    protected function setModuleName(): void
+    protected function loadModuleName(): string
     {
         $this->moduleName = Str::studly($this->argument('module')) ?? '';
 
         if ($this->moduleName !== '') {
-            return;
+            return $this->moduleName;
         }
 
         $this->moduleName = Str::studly(
@@ -153,19 +97,21 @@ class LaravelModuleSmartBreadGeneratorCommand extends Command
                 }
             )
         );
+
+        return $this->moduleName;
     }
 
-    /**
-     * Set the model name
+     /**
+     * Load the model name
      *
-     * @return void
+     * @return string: Model name
      */
-    protected function setModelName(): void
+    protected function loadModelName(): string
     {
         $this->modelName = Str::studly($this->argument('model')) ?? '';
 
         if ($this->modelName !== '') {
-            return;
+            return $this->modelName;
         }
 
         $this->modelName = Str::studly(
@@ -180,14 +126,16 @@ class LaravelModuleSmartBreadGeneratorCommand extends Command
                 }
             )
         );
+
+        return $this->modelName;
     }
 
     /**
-     * Get template option
+     * load template option
      *
-     * @return void
+     * @return string: Template name
      */
-    protected function getTemplate(): void
+    protected function getTemplate(): string
     {
         $template = $this->argument('template') ?? '';
         $templateConfig = config($this->configFile . '.templates');
@@ -210,12 +158,16 @@ class LaravelModuleSmartBreadGeneratorCommand extends Command
         }
 
         $this->template = $template;
-    }
 
+        return $this->template;
+    }
+   
     /**
-     * Get the model's table name  
+     * Load the model's table name  
+     * 
+     * @return string: Table name
      */
-    protected function setTableName(): void
+    protected function loadTableName(): string
     {
         $this->tableName = Str::snake($this->argument('table')) ?? '';
 
@@ -223,7 +175,7 @@ class LaravelModuleSmartBreadGeneratorCommand extends Command
             if (config($this->configFile . '.append_module_to_tablename') === true) {
                 $this->tableName = Str::snake($this->moduleName) . '_' . $this->tableName;
             }
-            return;
+            return $this->tableName;
         }
 
         $this->tableName = Str::snake(Str::studly(
@@ -242,6 +194,8 @@ class LaravelModuleSmartBreadGeneratorCommand extends Command
         if (config($this->configFile . '.append_module_to_tablename') === true) {
             $this->tableName = Str::snake($this->moduleName) . '_' . $this->tableName;
         }
+
+        return $this->tableName;
     }
 
     /**
@@ -256,6 +210,12 @@ class LaravelModuleSmartBreadGeneratorCommand extends Command
         return file_exists($model_file);
     }
 
+    /**
+     * Delete a file or directory
+     * 
+     * @param string $path
+     * @return void
+     */
     protected function delete($path): void
     {
         if (file_exists($path)) {
@@ -263,75 +223,19 @@ class LaravelModuleSmartBreadGeneratorCommand extends Command
         }
     }
 
+    /**
+     * Mirror a directory from source to destination
+     * 
+     * @param string $source
+     * @param string $destination
+     * @return void
+     */
     protected function mirror($source, $destination): void
     {
         $this->filesystem->mirror($source, $destination);
     }
 
-    protected function generate(): void
-    {
-        //ensure directory does not exist
-
-        info('Creating temporary directory of stub files.');
-        $this->delete($this->tempPath);
-        $this->mirror($this->templatePath, $this->tempPath.'/Module');
-
-        info('Writing template files from stubs.');
-        $finder = new Finder();
-        $finder->files()->in($this->tempPath);
-        
-        $progressBar = $this->output->createProgressBar(iterator_count($finder));
-        $progressBar->setFormat(' %current%/%max% [%bar%] %percent:3s%% - %message%');
-        
-        foreach ($finder as $file) {
-
-            // load stub and template file information
-            $stub_file = new SplFileInfo($file);
-            $template_file = new SplFileInfo($this->stubFilename($stub_file));
-
-            $progressBar->setMessage("Processing " . $template_file->getFilename() . ".");
-            
-            // ignores files from config
-            if (in_array($template_file, config($this->configFile . '.ignore_files'), true)) {
-                continue;
-            }
-
-            // replace content from stub on template
-            $this->createFileFromStub($stub_file, $template_file);
-
-            // move templates to destination
-
-            // routes
-            if (Str::endsWith($template_file, config($this->configFile . '.routes_pathnames'))) {
-
-                $target_route_pathname = $this->getTargetPathname($template_file);
-                if (!File::exists($target_route_pathname)) {
-                    $this->info('Route file does not exist. Creating new route file.');
-                    $this->createTargetFile($template_file);                    
-                    continue;   
-                }
-
-                $this->info("Route " . $template_file->getFilename() . " exist. Merging route file.");
-
-                $template_routefile = new RouteFileParser($template_file);
-                $target_routefile = new RouteFileParser($target_route_pathname);
-
-                $target_routefile->mergeUses($template_routefile->getUses());
-                $target_routefile->mergeBody($template_routefile->getBody());
-                $target_routefile->save();
-
-                continue;
-            }
-
-            $this->createTargetFile($template_file);
-
-            $progressBar->advance();
-        }
-
-        $progressBar->finish();
-        $this->newLine();
-        
-    }
+    
 
     protected function getTargetPathname(SplFileInfo $template): string 
     {
@@ -344,6 +248,7 @@ class LaravelModuleSmartBreadGeneratorCommand extends Command
         return $target_pathname;
         
     }
+
     protected function createTargetPath(SplFileInfo $template): string
     {
         $target_pathname = $this->getTargetPathname($template);
@@ -376,7 +281,13 @@ class LaravelModuleSmartBreadGeneratorCommand extends Command
 
     }
 
-    protected function appendTimestamp($sourceFile): array|string
+    /**
+     * Append a timestamp to the filename
+     *
+     * @param string $sourceFile
+     * @return string
+     */
+    protected function appendTimestamp($sourceFile): string
     {
         $timestamp = date('Y_m_d_his_');
         $file = basename($sourceFile);
@@ -416,6 +327,12 @@ class LaravelModuleSmartBreadGeneratorCommand extends Command
         return str_replace(array_keys($this->replacements), array_values($this->replacements), $content);
     }
 
+    /**
+     * Get the stub filename
+     *
+     * @param SplFileInfo $sourceFile
+     * @return string
+     */
     protected function stubFilename(SplFileInfo $sourceFile): string {
 
         $destinationPath = $this->replaceContent($sourceFile->getPath());
@@ -432,8 +349,16 @@ class LaravelModuleSmartBreadGeneratorCommand extends Command
         return $destinationPath . '/' . $destinationFile;
 
     }
-    
 
+    /**
+     * Rename placeholders in a string
+     *
+     * @param string $model
+     * @param string $separator
+     * @param bool $arrayMap
+     * @return string
+     */
+    
     protected function renamePlaceholders($model, $separator, $arrayMap = null): string
     {
         $parts = preg_split('/(?=[A-Z])/', $model, -1, PREG_SPLIT_NO_EMPTY);
@@ -445,6 +370,11 @@ class LaravelModuleSmartBreadGeneratorCommand extends Command
         return implode($separator, $parts);
     }
 
+    /**
+     * Load replacements for the template
+     *
+     * @return void
+     */
 
     protected function loadReplacements(): void {
 
@@ -487,93 +417,3 @@ class LaravelModuleSmartBreadGeneratorCommand extends Command
     }
 }
 
-class RouteFileParser
-{
-
-    protected SplFileInfo $routeFile;
-    protected $namespace = '';
-    protected $uses = [];
-    protected $body = '';
-
-    public function __construct(SplFileInfo|string $routeFile = null) {
-        if ($routeFile !== null) {
-            $this->parse($routeFile);
-        }
-    }
-
-    public function parse(SplFileInfo|string $routeFile) {
-
-
-        if (!file_exists($routeFile)) {
-            throw new RuntimeException(sprintf('Route file "%s" does not exist', $routeFile));
-        }
-
-        $this->routeFile = new SplFileInfo($routeFile);
-
-        $content = File::get($routeFile);
-
-        // get the namespace
-        if (preg_match('/namespace\s+([^;]+);/', $content, $matches)) {
-            $this->namespace = trim($matches[1]);
-        }
-
-        // get uses
-        preg_match_all('/use\s+[^;]+;/', $content, $useMatches);
-        $this->uses = $useMatches[0];
-
-        // get body
-        $contentWithoutNamespaceAndUses = preg_replace('/^(namespace\s+[^;]+;\s*)|(use\s+[^;]+;\s*)/m', '', $content);
-
-        // Remove a tag <?php se existir
-        $contentWithoutNamespaceAndUses = str_replace('<?php', '', $contentWithoutNamespaceAndUses);
-
-        $this->body = trim($contentWithoutNamespaceAndUses);
-
-    }
-
-    public function getNamespace(): string
-    {
-        return $this->namespace;
-    }
-
-    public function getUses(): array
-    {
-        return $this->uses;
-    }
-
-    public function getBody(): string
-    {
-        return $this->body;
-    }
-
-    public function mergeUses(array $newUses)
-    {
-        $this->uses = array_unique(array_merge($this->uses, $newUses));
-        sort($this->uses); // opcional: organizar em ordem alfabética
-    }
-
-    public function mergeBody(string $newBody)
-    {
-        $this->body .= "\n" . $newBody;
-    }
-
-    public function build(): string
-    {
-        $namespaceLine = $this->namespace ? "namespace {$this->namespace};\n\n" : '';
-
-        $usesBlock = implode("\n", $this->uses);
-        $body = trim($this->body);
-
-        return trim('<?php' . "\n\n" . $namespaceLine . $usesBlock . "\n\n" . $body) . "\n";
-    }
-
-    public function saveToFile(string $pathname): void
-    {
-        File::put($pathname, $this->build());
-    }
-
-    public function save(): void
-    {
-        $this->saveToFile($this->routeFile);
-    }
-}
