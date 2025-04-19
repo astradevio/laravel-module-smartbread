@@ -5,11 +5,11 @@
  * 
  * See: http://www.laravelmodule.com
  * 
- * @package astradev\ModuleSmartBreadGenerator
+ * @package astradev\ModuleSmartBread
  * @author  Leandro Neves <leandro@astradev.io>
  * @license MIT
  * 
- * This work is based on rewrite on a work of David Carr. 
+ * This work is based on rewrite on a ideas of David Carr. 
  * 
  * See: 
  * dcblogdev/laravel-module-generator
@@ -17,7 +17,6 @@
  * 
  */
 namespace astradevio\LaravelModuleSmartBread\Console\Commands;
-
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Str;
@@ -32,75 +31,54 @@ use function Laravel\Prompts\info;
 use function Laravel\Prompts\select;
 use function Laravel\Prompts\text;
 
-use astradevio\LaravelModuleSmartBread\Services\SmartBreadServices;
-use astradevio\LaravelModuleSmartBread\Services\SmartBreadRouteFileParser;
+use \astradevio\LaravelModuleSmartBread\Services\SmartBreadService;
+use \astradevio\LaravelModuleSmartBread\Services\SmartBreadRouteFileParser;
+
 
 class SmartBreadReplacerCommand extends Command
 {
-    protected $signature = 'smartbread:replace {item}';
-    protected $description = 'Replace items [views] files from a template on a module';
-    protected string $moduleName = '';      // Name of module
-    protected string $modelName = '';       // Name of model
-    protected string $tableName = '';       // Name of table on model
-    protected string $template = '';        // Chosen template
-    protected string $templatePath = '';    // Path to template directory e.g: app_path() . /stubs/module-generator/$template
-    protected string $tempPath = '';        // Path to temporary folder e.g: app_path() . /generator-temp
-    protected string $modulePath = '';      // Path to module directory e.g: app_path() . /Modules/$moduleName
-    protected array $replacements = [];     // Replacements for template files
+    protected $signature = 'smartbread:replace {option} {template?} {module?} {model?}';
+    protected $description = 'Relapce [view] files from a template.';
+    private $subPath = '';
 
-    protected SymfonyFilesystem  $filesystem;
+    public SmartBreadService $service;
 
     public function handle(): bool
     {
-
-        $service = new SmartBreadService();
-
-        if ($item == 'view') {
-            $folder = 'resources/views';
+        if ($this->argument('option') !== 'view') {
+            $this->service->exit_fail('Error: option not supported.');
         } else {
-            $service->exit_error("Choose a valid item to replace. Valid option is 'view'.");
+            $this->subPath = 'resources/views';
         }
 
-        $service->exit_success('View files replaced successfully.');
+        $this->service = new SmartBreadService();
 
-        /** 
-         * Setup templates 
-         */     
-        $this->template = $service->loadTemplate();
-        $this->templatePath = base_path($this->template);
-        $this->tempPath     = base_path('.tmp'. Str::random(10));
+        // Template
+        $result = $this->service->loadTemplate($this->argument('template'));
 
-        if (!file_exists($this->templatePath)) {
-            $this->exit_fail("$this->templatePath Path does not exist! Please check your config/module-generator.php file.");
+        if (!file_exists($this->service->templatePath)) {
+            $this->service->exit_fail("$this->service->templatePath Path does not exist! Please check your config/module-generator.php file.");
         }
 
-        /**
-         * Setup module's name in PascalCase
-         */
-        $modulePath = config('modules.paths.modules').'/';
-        $this->modulePath = Str::endsWith($modulePath, '/') ? $modulePath : $modulePath.'/';
+        $this->moduleName = $this->service->loadModuleName($this->argument('module'));
 
-        $this->moduleName = $service->loadModuleName();
-
-        if (! file_exists($this->modulePath.$this->moduleName)) {
-            $service->exit_fail("$this->moduleName module does not exist. What do you want to do?");
+        if (!file_exists($this->service->modulePath . $this->service->moduleName)) {
+            $this->service->exit_fail($this->service->modulePath . $this->service->moduleName . " module does not exists.");
         }
 
         /**
          * Setup model's name in PascalCase
          */
-        $this->modelName = $service->loadModelName();
+        $this->service->loadModelName($this->argument('model'), $error_on_exist = true);
 
-        if ($this->modelExists($this->modelName)) {
-            service->exit_fail("$this->moduleName / $this->modelName exists.");
+        if (! $this->service->modelExists($this->service->modelName)) {
+            $this->service->exit_fail('Error: ' . $this->service->moduleName . "/" . $this->service->modelName . "does not exists.");
         }
 
         /**
-         * Setup table name in snake_case
+         * Load replacements in memory
          */
-
-        $this->tableName = $service->setTableName();
-      
+        $this->service->loadReplacements();
 
         /**
          * Generate models 
@@ -108,69 +86,51 @@ class SmartBreadReplacerCommand extends Command
         $this->generate();
 
         $this->newLine();
-        $service->exit_success("Bread template $this->modelName on Module $this->moduleName created successfully.");
+        $this->service->exit_success('Bread template ' . $this->service->modelName . ' on Module ' . $this->service->moduleName . 'created successfully.');
     }
 
     
     protected function generate(): void
     {
         //ensure directory does not exist
-
         info('Creating temporary directory of stub files.');
-        $service->delete($this->tempPath);
-        $service->mirror($this->templatePath, $this->tempPath.'/Module');
+        $this->service->delete($this->service->tempPath);
+
+        $this->templatePath = $this->service->templatePath . '/' . $this->subPath;
+        $this->tempPath = $this->service->tempPath;
+
+        $this->service->mirror($this->templatePath, $this->tempPath. '/'. $this->subPath);
 
         info('Writing template files from stubs.');
         $finder = new Finder();
-        $finder->files()->in($this->tempPath);
+
+        $finder->files()->in($this->tempPath . '/'. $this->subPath);
         
         $progressBar = $this->output->createProgressBar(iterator_count($finder));
         $progressBar->setFormat(' %current%/%max% [%bar%] %percent:3s%% - %message%');
-        
+
+        $modulePath = config('modules.paths.modules').'/';
+        $this->modulePath = Str::endsWith($modulePath, '/') ? $modulePath : $modulePath.'/';
+       
         foreach ($finder as $file) {
 
             // load stub and template file information
             $stub_file = new SplFileInfo($file);
-            $template_file = new SplFileInfo($service->stubFilename($stub_file));
+            $template_file = new SplFileInfo($this->service->stubFilename($stub_file));
 
             $progressBar->setMessage("Processing " . $template_file->getFilename() . ".");
             
             //!!
             // ignores files from config
-            if (in_array($template_file, config($service->configFile . '.ignore_files'), true)) {
+            if (in_array($template_file, config($this->service->configFile . '.ignore_files'), true)) {
                 continue;
             }
 
             // replace content from stub on template
-            $service->createFileFromStub($stub_file, $template_file);
+            $this->service->createFileFromStub($stub_file, $template_file);
 
-            // move templates to destination
-
-            // routes
-            if (Str::endsWith($template_file, config($service->configFile . '.routes_pathnames'))) {
-
-                $target_route_pathname = $this->getTargetPathname($template_file);
-                if (!File::exists($target_route_pathname)) {
-                    info('Route file does not exist. Creating new route file.'); //$this
-                    $service->createTargetFile($template_file);                    
-                    continue;   
-                }
-
-                info("Route " . $template_file->getFilename() . " exist. Merging route file."); // $this
-
-                $template_routefile = new LaravelModuleSmartBreadRouteFileParser($template_file);
-                $target_routefile = new LaravelModuleSmartBreadRouteFileParser($target_route_pathname);
-
-                $target_routefile->mergeUses($template_routefile->getUses());
-                $target_routefile->mergeBody($template_routefile->getBody());
-                $target_routefile->save();
-
-                continue;
-            }
-
-
-
-            $service->createTargetFile($template_file);
+            // Create target file
+            $this->createTargetFile($template_file);
 
             $progressBar->advance();
         }
@@ -178,6 +138,44 @@ class SmartBreadReplacerCommand extends Command
         $progressBar->finish();
         $this->newLine();
         
+    }
+
+    // override
+    public function getTargetPathname(SplFileInfo $template): string 
+    {
+        $template_relative_pathname = substr($template->getPathname(), strlen($this->tempPath . '/'));           
+        $template_relative_path = dirname($template_relative_pathname);
+
+        $target_path = $this->modulePath . $this->moduleName . '/' . $template_relative_path;
+        $target_pathname = $this->modulePath . $this->moduleName . '/' . $template_relative_pathname;
+
+        return $target_pathname;
+        
+    }
+
+    public function createTargetPath(SplFileInfo $template): string
+    {
+        $target_pathname = $this->getTargetPathname($template);
+        $target_path = dirname($target_pathname);
+
+        // create target directory if not exists
+        if ( !File::exists($target_path) && 
+                ! File::makeDirectory($target_path, $mode = 0755, $recursive = true, $force = false) && 
+                ! File::exists($target_path)) {
+            throw new RuntimeException(sprintf('Directory "%s" was not created', $target_path)); 
+        }
+
+        return $target_path;
+    }
+
+    public function createTargetFile(SplFileInfo $template): void
+    {
+
+        $target_pathname = $this->getTargetPathname($template);
+        $target_path = $this->createTargetPath($template);
+
+        $this->service->filesystem->copy($template->getPathname(), $target_pathname);
+
     }
 
 }
