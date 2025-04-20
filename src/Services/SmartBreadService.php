@@ -126,9 +126,7 @@ class SmartBreadService {
 
         if ($this->modelName !== '') {
             return $this->modelName;
-	}
-
-	$this->service->controllerExists($this->service->modelName)
+	    }
 
         $this->modelName = Str::studly(
             text(
@@ -137,11 +135,11 @@ class SmartBreadService {
                 validate: fn(string $value) => match (true) {
                     strlen($value) < 1 => 'The name must be at least 1 characters.',
                     Str::contains($value, ' ') => 'The name must not contain spaces.',
-		    ($invalidIf xor $this->service->controllerExists($this->service->modelName)) => "Module does not exist: " . $this->modulePath . Str::studly($value) . ".",
+		            $invalidIf xor $this->service->controllerExists($this->service->modelName) => "Model does not exist: " . $this->modelPath . Str::studly($value) . ".",
                     default => null
                 }
             )
-	);
+	    );
 
 	/*
 	invalid if	file exist	invalid result (erro = true)
