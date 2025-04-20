@@ -63,7 +63,7 @@ class SmartBreadGeneratorCommand extends Command
         /**
          * Setup model's name in PascalCase
          */
-        $this->service->loadModelName($this->argument('model'), $error_on_exist = true);
+        $this->service->loadModelName($this->argument('model'), $invalidIf = true);
 
         if ($this->service->modelExists($this->service->modelName) ||
             $this->service->controllerExists($this->service->modelName)) {

@@ -37,22 +37,23 @@ class SmartBreadService {
     public string $modulePath = '';      // Path to module directory e.g: app_path() . /Modules/$moduleName
     public array $replacements = [];     // Replacements for template files
 
-    public Command $command; // Command instance ???
+    public bool $useSingular = false;    // Use singular for table name
 
+    public Command $command; // Command instance ???
 
     public SymfonyFilesystem  $filesystem;
 
     public string $configFile = 'smartbread';
 
     public function __construct() {
-        
+
         $this->filesystem = new SymfonyFilesystem();
+
 
         /* 
          * Setup parameters
          */
         $this->useSingular = config($this->configFile . '.use_singular') === true ? true : false;
-
 
         /**
          * Setup module's name in PascalCase
@@ -60,13 +61,7 @@ class SmartBreadService {
         $modulePath = config('modules.paths.modules').'/';
         $this->modulePath = Str::endsWith($modulePath, '/') ? $modulePath : $modulePath.'/';
 
-        info($this->modulePath);
 
-        
-        /**
-         * Load replacements in memory
-         */
-        $this->loadReplacements();
     }
 
     /**
@@ -111,7 +106,7 @@ class SmartBreadService {
                 validate: fn(string $value) => match (true) {
                     strlen($value) < 1 => 'The name must be at least 1 characters.',
                     Str::contains($value, ' ') => 'The name must not contain spaces.',
-                    ! file_exists($this->modulePath . Str::studly($value)) => "Module does not exist. " . $this->modulePath . Str::studly($value),
+                    ! file_exists($this->modulePath . Str::studly($value)) => "Module does not exist: " . $this->modulePath . Str::studly($value) . ".",
                     default => null
                 }
             )
@@ -125,13 +120,15 @@ class SmartBreadService {
      *
      * @return string: Model name
      */
-    public function loadModelName($argument): string
+    public function loadModelName($argument, $invalidIf=false): string
     {
         $this->modelName = Str::studly($argument) ?? '';
 
         if ($this->modelName !== '') {
             return $this->modelName;
-        }
+	}
+
+	$this->service->controllerExists($this->service->modelName)
 
         $this->modelName = Str::studly(
             text(
@@ -140,11 +137,19 @@ class SmartBreadService {
                 validate: fn(string $value) => match (true) {
                     strlen($value) < 1 => 'The name must be at least 1 characters.',
                     Str::contains($value, ' ') => 'The name must not contain spaces.',
-                    $this->modelExists(Str::studly($value)) => 'Model already exists.',
+		    ($invalidIf xor $this->service->controllerExists($this->service->modelName)) => "Module does not exist: " . $this->modulePath . Str::studly($value) . ".",
                     default => null
                 }
             )
-        );
+	);
+
+	/*
+	invalid if	file exist	invalid result (erro = true)
+	false		false		false
+	false		true		true
+	true		false		true
+	true		true		false
+	 */
 
         return $this->modelName;
     }
@@ -154,21 +159,21 @@ class SmartBreadService {
      *
      * @return string: Template name
      */
-    public function loadTemplate($argument)
+    public function loadTemplate($argument): string
     {
         $template = $argument ?? '';
+
         $templateConfig = config($this->configFile . '.templates');
 
         if ($template !== '') {
             if (in_array($template, array_keys($templateConfig))) {
                 $template = $templateConfig[$template];
             } else {
-                error("Invalid template option: $template");
                 $template = '';
             }
         }
 
-        if ($template === '') {
+        if ($template == '') {
             $template = select(
                 'Which template would you like to use?',
                 array_keys($templateConfig)
@@ -176,9 +181,11 @@ class SmartBreadService {
             $template = $templateConfig[$template];
         }
 
-        $this->$template    = $template;
+        $this->template     = $template;
         $this->templatePath = base_path($this->template);
         $this->tempPath     = base_path('.tmp'. Str::random(10));
+
+        return $this->template;
     }
    
     /**
@@ -225,9 +232,16 @@ class SmartBreadService {
      */
     public function modelExists($model_name): bool
     {   
-        $model_file = $this->modulePath . $this->moduleName . '/app/Model/' . $model_name . '.php';
+        $model_file = $this->modulePath . $this->moduleName . '/app/Models/' . $model_name . '.php';
         return file_exists($model_file);
     }
+
+    public function controllerExists($controller_name): bool
+    {   
+        $model_file = $this->modulePath . $this->moduleName . '/app/Http/Controllers/' . $controller_name . 'Controller.php';
+        return file_exists($model_file);
+    }
+
 
     /**
      * Delete a file or directory
@@ -251,9 +265,10 @@ class SmartBreadService {
      */
     public function mirror($source, $destination): void
     {
-        info("Copying template files from $source to $destination");
         $this->filesystem->mirror($source, $destination);
     }
+
+    
 
     public function getTargetPathname(SplFileInfo $template): string 
     {

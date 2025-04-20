@@ -69,7 +69,7 @@ class SmartBreadReplacerCommand extends Command
         /**
          * Setup model's name in PascalCase
          */
-        $this->service->loadModelName($this->argument('model'), $error_on_exist = true);
+        $this->service->loadModelName($this->argument('model'), $invertResult = true);
 
         if (! $this->service->modelExists($this->service->modelName)) {
             $this->service->exit_fail('Error: ' . $this->service->moduleName . "/" . $this->service->modelName . "does not exists.");

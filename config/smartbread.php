@@ -2,11 +2,8 @@
 
 return [
     'templates' => [
-        'Livewire - Volt - Bread Web & API' => 'stubs/module-smartbread/livewire-volt-full',
-        /*
-        'Breeze - Blade - CRUD Web only' => 'stubs/module-generator/breeze-crud-web',
-        'Breeze - Blade - CRUD API only' => 'stubs/module-generator/breeze-crud-api'
-        */
+        'Livewire - Volt - Bread Web & API with SmartForms' => 'stubs/smartbread/livewire-volt-full-smartforms',
+        'Livewire - Volt - Bread Web & API' => 'stubs/smartbread/livewire-volt-full',
     ],
     'ignore_files' => ['module.json'],
     'use_singular' => 'true',
